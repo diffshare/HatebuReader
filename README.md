@@ -36,9 +36,16 @@
 
 記事ページをクリックするとキー入力はページ側へ渡ります。一覧に戻すには `Esc` を押すか、一覧やカテゴリをクリックします。ページ自身が `Esc` を使う場合（ダイアログを閉じるなど）はページ側の処理を優先します。
 
-## ビルドと起動
+## 入手
 
-実行ファイルの配布はまだ行っていません。ソースからビルドしてください。
+[Releases](https://github.com/diffshare/HatebuReader/releases) で、Windows（x64）と macOS（Apple Silicon）向けの zip を配布します。zip には、このアプリと同梱ライブラリのライセンス（`LICENSE`、`THIRD-PARTY-LICENSES.html`、`Readability-LICENSE.md`）も入っています。
+
+どちらも開発者の署名をしていないため、初回の起動時に OS の警告が出ます。
+
+- Windows：「Windows によって PC が保護されました」と出たら、「詳細情報」から「実行」を選びます。
+- macOS：`Hatebu Reader.app` を「アプリケーション」に移して開き、開けないと表示されたら「システム設定」の「プライバシーとセキュリティ」で「このまま開く」を選びます。
+
+## ソースからビルド
 
 必要なもの：
 
@@ -94,6 +101,13 @@ GPUI と WebView2 の実イベントループを使用する統合テストは�
 ```sh
 cargo test --locked webview_runtime -- --ignored --test-threads=1
 ```
+
+### CI とリリース
+
+- `.github/workflows/ci.yml`：PR と main への push で、Windows と macOS の書式チェック・clippy・テスト・ビルドを行います。WebView2 の統合テストは Windows で試行し、失敗しても全体は止めません。`actions.lock` の検証も行います。
+- `.github/workflows/release.yml`：`v` で始まるタグ（例：`v0.1.0`）を push すると、配布用の zip を作って下書きのリリースに添付します。タグは `Cargo.toml` の `version` と一致させます。配布の設定を変える PR と手動実行では、zip を作って Actions の成果物に置くだけです。
+- 依存ライブラリのライセンス一覧は [cargo-about](https://github.com/EmbarkStudios/cargo-about) で作ります（`about.toml`、`about.hbs`）。`about.toml` で許可していないライセンスの依存が入ると失敗します。
+- 外部の Action は GitHub の[ワークフローのロックファイル](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles)（`.github/workflows/actions.lock`）で固定します。ワークフローの `uses:` を変えたら `gh actions-lock` で作り直します。更新は Dependabot が PR で知らせます。
 
 ### 構成
 

@@ -1,0 +1,152 @@
+name: Release
+
+# v で始まるタグを push すると、Windows と macOS の配布物を作り、下書きのリリースに添付する。
+# 手動実行と、配布の設定を変える PR では、配布物を作って Actions の成果物に置くだけで、リリースは作らない。
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - about.toml
+      - about.hbs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      label: ${{ steps.version.outputs.label }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: version
+        name: バージョンを確かめる
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+              echo "タグ $GITHUB_REF_NAME が Cargo.toml のバージョン $version と一致しません" >&2
+              exit 1
+            fi
+            label="$GITHUB_REF_NAME"
+          else
+            label="dev-${GITHUB_SHA::7}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "label=$label" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: 依存ライブラリのライセンス一覧を作る
+        run: |
+          cargo install cargo-about --locked --version 0.9.3 --features cli
+          cargo about generate --fail about.hbs > THIRD-PARTY-LICENSES.html
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: licenses
+          path: THIRD-PARTY-LICENSES.html
+
+  windows:
+    name: build (windows x64)
+    needs: prepare
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.3
+      - run: cargo build --release --locked
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: licenses
+      - name: zip にまとめる
+        shell: pwsh
+        run: |
+          $name = "HatebuReader-${{ needs.prepare.outputs.label }}-windows-x64"
+          New-Item -ItemType Directory "dist/$name" | Out-Null
+          Copy-Item target/release/hatebu-reader.exe "dist/$name/HatebuReader.exe"
+          Copy-Item LICENSE, README.md, THIRD-PARTY-LICENSES.html "dist/$name/"
+          Copy-Item assets/readability/LICENSE.md "dist/$name/Readability-LICENSE.md"
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: dist-windows
+          path: dist/*.zip
+
+  macos:
+    name: build (macos arm64)
+    needs: prepare
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.3
+      - run: cargo build --release --locked
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: licenses
+      - name: .app を作り zip にまとめる
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          LABEL: ${{ needs.prepare.outputs.label }}
+        run: |
+          name="HatebuReader-$LABEL-macos-arm64"
+          app="dist/$name/Hatebu Reader.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp target/release/hatebu-reader "$app/Contents/MacOS/hatebu-reader"
+          cp assets/icon/icon.icns "$app/Contents/Resources/icon.icns"
+          cat > "$app/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>Hatebu Reader</string>
+            <key>CFBundleDisplayName</key><string>Hatebu Reader</string>
+            <key>CFBundleIdentifier</key><string>io.github.diffshare.HatebuReader</string>
+            <key>CFBundleExecutable</key><string>hatebu-reader</string>
+            <key>CFBundleIconFile</key><string>icon</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>$VERSION</string>
+            <key>CFBundleVersion</key><string>$VERSION</string>
+            <key>LSApplicationCategoryType</key><string>public.app-category.news</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+          plutil -lint "$app/Contents/Info.plist"
+          # Developer ID の署名はしない。ad-hoc 署名だけ行い、.app 全体の署名をそろえる。
+          codesign --force --deep --sign - "$app"
+          cp LICENSE README.md THIRD-PARTY-LICENSES.html "dist/$name/"
+          cp assets/readability/LICENSE.md "dist/$name/Readability-LICENSE.md"
+          (cd dist && ditto -c -k --keepParent "$name" "$name.zip")
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: dist-macos
+          path: dist/*.zip
+
+  release:
+    name: draft release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: 下書きのリリースを作る
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --repo "$GITHUB_REPOSITORY" --draft --generate-notes \
+            --title "Hatebu Reader $GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}

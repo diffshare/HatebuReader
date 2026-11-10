@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # ワークフローの Action を更新する。actions.lock も同じ PR で作り直される。
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

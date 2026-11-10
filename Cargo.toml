@@ -18,3 +18,6 @@ wry = { version = "=0.57.1", default-features = false, features = ["os-webview"]
 # Xcode 本体なしでビルドできるよう、Metal シェーダーを起動時にコンパイルする。
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui = { version = "=0.2.2", features = ["runtime_shaders"] }
+
+[build-dependencies]
+winresource = "0.1.34"

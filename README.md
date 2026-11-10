@@ -102,6 +102,9 @@ cargo test --locked webview_runtime -- --ignored --test-threads=1
 - `src/browser.rs`: WebView の初期化、表示領域と DPI の同期、履歴操作、リーダー表示の適用
 - `src/browser_runtime_test.rs`: ローカルページを使用した WebView の統合テスト
 - `assets/icons/`: ツールバーなどのアイコン（SVG、実行ファイルに埋め込む）
+- `assets/icon/`: アプリアイコン（元の `icon.svg` と、そこから作った Windows 用 `icon.ico`、macOS 用 `icon.icns`）
+- `build.rs`: Windows の実行ファイルにアプリアイコンを埋め込む
+- `scripts/make-icons.ps1`: `icon.svg` から `icon.ico`・`icon.icns`・確認用の `icon-256.png` を作り直す（Windows 専用。Microsoft Edge で描画する）
 - `assets/reader.js`: 抽出した本文で表示を置き換えるスクリプトと、その CSS
 - `assets/readability/`: Mozilla Readability.js 0.6.0 とライセンス（npm の `@mozilla/readability` から無改変で同梱）
 

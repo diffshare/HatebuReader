@@ -43,7 +43,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: 依存ライブラリのライセンス一覧を作る
         run: |
-          cargo install cargo-about --locked --version 0.9.3
+          cargo install cargo-about --locked --version 0.9.3 --features cli
           cargo about generate --fail about.hbs > THIRD-PARTY-LICENSES.html
       - uses: actions/upload-artifact@v7.0.2
         with:

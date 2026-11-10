@@ -1,0 +1,20 @@
+[package]
+name = "hatebu-reader"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+anyhow = "1"
+async-channel = "2"
+gpui = "=0.2.2"
+raw-window-handle = "0.6"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+roxmltree = "0.21"
+url = "2"
+wry = { version = "=0.57.1", default-features = false, features = ["os-webview"] }
+
+# Xcode 本体なしでビルドできるよう、Metal シェーダーを起動時にコンパイルする。
+[target.'cfg(target_os = "macos")'.dependencies]
+gpui = { version = "=0.2.2", features = ["runtime_shaders"] }

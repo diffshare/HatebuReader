@@ -1,3 +1,7 @@
+// リリース版は Windows の GUI アプリとして作り、起動時にコンソールウィンドウを開かない。
+// デバッグ版はエラーなどの出力を見られるよう、コンソールアプリのままにする。
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod browser;
 mod feed;
 

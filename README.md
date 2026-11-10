@@ -2,7 +2,7 @@
 
 はてなブックマークの人気・新着エントリーを読むための、Windows・macOS 向けデスクトップアプリです。総合と 8 カテゴリの一覧から記事を開き、記事とはてなブックマークのコメントを同じ画面で切り替えて読めます。広告やメニューを除いて本文だけを読むリーダー表示や、キーボードだけでの操作にも対応しています。
 
-株式会社はてなとは関係のない非公式のアプリです。開発者は GitHub の [diffshare](https://github.com/diffshare) です。不具合や要望は [Issues](https://github.com/diffshare/HatebuReader/issues) にお寄せください。
+株式会社はてなとは関係のない非公式のアプリです。開発者は [diffshare](https://github.com/diffshare) です。不具合や要望は [Issues](https://github.com/diffshare/HatebuReader/issues) にお寄せください。
 
 ![Hatebu Reader の画面。左にカテゴリ、中央にエントリーの一覧、右にリーダー表示の記事（記事の内容はぼかしています）](docs/images/screenshot.png)
 
